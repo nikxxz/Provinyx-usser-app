@@ -1,19 +1,20 @@
-
 export const colors = {
   // Primary Colors
-  primary: '#1f60d9', 
+  primary: '#1f60d9',
   primaryDark: '#1a4ba8',
   primaryLight: '#e3f2fd',
 
   // Neutral Colors
-  text: '#1f2937', 
-  textSecondary: '#6b7280', 
+  text: '#1f2937',
+  textSecondary: '#6b7280',
+  gray100: '#f3f4f6',
+  gray200: '#e5e7eb',
+  gray300: '#d1d5db',
+  gray400: '#9ca3af',
   gray500: '#6b7280',
   gray600: '#4b5563',
-  gray400: '#9ca3af',
-  gray300: '#d1d5db',
   white: '#ffffff',
-  background: '#f0f4f8', 
+  background: '#f0f4f8',
 
   // Status Colors
   success: '#10b981',

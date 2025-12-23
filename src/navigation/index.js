@@ -9,11 +9,27 @@ import SignUpScreen from '../screens/SignUpScreen';
 import VerificationScreen from '../screens/VerificationScreen';
 import AuthSuccessScreen from '../screens/AuthSuccessScreen';
 import HomeScreen from '../screens/HomeScreen';
+import RecentsScreen from '../screens/RecentsScreen';
+import DigitalPassportScreen from '../screens/DigitalPassportScreen';
 
 const Stack = createNativeStackNavigator();
 
 const RootNavigator = () => {
   const { isAuthenticated, validateUser, logout } = useContext(AuthContext);
+
+  // Periodic auth validation check
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isAuthenticated()) {
+        const isValid = validateUser();
+        if (!isValid) {
+          logout();
+        }
+      }
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated, validateUser, logout]);
 
   return (
     <NavigationContainer
@@ -23,7 +39,6 @@ const RootNavigator = () => {
           const isValid = validateUser();
           if (!isValid) {
             logout();
-            // Navigation will be handled by the conditional below
           }
         }
       }}
@@ -50,6 +65,11 @@ const RootNavigator = () => {
         ) : (
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Recents" component={RecentsScreen} />
+            <Stack.Screen
+              name="DigitalPassport"
+              component={DigitalPassportScreen}
+            />
             <Stack.Screen name="Verification" component={VerificationScreen} />
             <Stack.Screen name="AuthSuccess" component={AuthSuccessScreen} />
           </>
