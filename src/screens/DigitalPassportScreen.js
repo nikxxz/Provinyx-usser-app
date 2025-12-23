@@ -331,7 +331,9 @@ const DigitalPassportScreen = ({ route, navigation }) => {
           </View>
           <View style={styles.additionalInfoItem}>
             <Text style={styles.additionalInfoLabel}>Manufacturer</Text>
-            <Text style={styles.additionalInfoValue}>{details.productNameDisplay}</Text>
+            <Text style={styles.additionalInfoValue}>
+              {details.productNameDisplay}
+            </Text>
           </View>
           <View style={styles.additionalInfoItem}>
             <Text style={styles.additionalInfoLabel}>Expiry Date</Text>
