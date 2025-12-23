@@ -14,13 +14,15 @@ import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../constants/colors';
 import { AuthContext } from '../context/AuthContext';
-import { scannerDummyProducts } from '../data/DummyData';
+import { useStore } from '../store';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.7;
 
 const HomeScreen = ({ navigation }) => {
   const { validateUser, logout } = useContext(AuthContext);
+  const { state } = useStore();
+  const recentScans = state.scanHistory || [];
 
   // Check auth status when screen comes into focus
   useFocusEffect(
@@ -173,7 +175,10 @@ const HomeScreen = ({ navigation }) => {
           </Text>
 
           {/* Scan Now Button */}
-          <TouchableOpacity style={styles.scanButton}>
+          <TouchableOpacity
+            style={styles.scanButton}
+            onPress={() => navigation.navigate('Scanner')}
+          >
             <Text style={styles.scanButtonText}>Scan Now</Text>
           </TouchableOpacity>
         </View>
@@ -190,20 +195,32 @@ const HomeScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.recentsScrollContent}
-          >
-            {scannerDummyProducts
-              .slice(0, 5)
-              .map((product, index) => renderRecentScanCard(product, index))}
-          </ScrollView>
+          {recentScans.length === 0 ? (
+            <View style={styles.recentsEmptyContainer}>
+              <Text style={styles.recentsEmptyTitle}>No scans yet</Text>
+              <Text style={styles.recentsEmptyText}>
+                Your last scanned products will appear here.
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.recentsScrollContent}
+            >
+              {recentScans
+                .slice(0, 5)
+                .map((product, index) => renderRecentScanCard(product, index))}
+            </ScrollView>
+          )}
         </View>
       </ScrollView>
 
       {/* Floating Scan Button */}
-      <TouchableOpacity style={styles.floatingScanButton}>
+      <TouchableOpacity
+        style={styles.floatingScanButton}
+        onPress={() => navigation.navigate('Scanner')}
+      >
         <Icon name="qrcode-scan" size={32} color="#fff" />
       </TouchableOpacity>
     </SafeAreaView>
@@ -310,6 +327,20 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
     paddingRight: 16,
     gap: 12,
+  },
+  recentsEmptyContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  recentsEmptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  recentsEmptyText: {
+    fontSize: 13,
+    color: colors.gray600,
   },
   recentCard: {
     width: CARD_WIDTH,

@@ -11,6 +11,7 @@ import AuthSuccessScreen from '../screens/AuthSuccessScreen';
 import HomeScreen from '../screens/HomeScreen';
 import RecentsScreen from '../screens/RecentsScreen';
 import DigitalPassportScreen from '../screens/DigitalPassportScreen';
+import ScannerScreen from '../screens/ScannerScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -65,6 +66,7 @@ const RootNavigator = () => {
         ) : (
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Scanner" component={ScannerScreen} />
             <Stack.Screen name="Recents" component={RecentsScreen} />
             <Stack.Screen
               name="DigitalPassport"

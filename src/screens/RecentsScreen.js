@@ -12,11 +12,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../constants/colors';
-import { scannerDummyProducts } from '../data/DummyData';
 import { AuthContext } from '../context/AuthContext';
+import { useStore } from '../store';
 
 const RecentsScreen = ({ navigation }) => {
   const { validateUser, logout } = useContext(AuthContext);
+  const { state } = useStore();
+  const recentScans = state.scanHistory || [];
 
   // Check auth status when screen comes into focus
   useFocusEffect(
@@ -137,13 +139,22 @@ const RecentsScreen = ({ navigation }) => {
       </View>
 
       {/* Products List */}
-      <FlatList
-        data={scannerDummyProducts}
-        renderItem={renderProductCard}
-        keyExtractor={(item, index) => index.toString()}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+      {recentScans.length === 0 ? (
+        <View style={styles.emptyStateContainer}>
+          <Text style={styles.emptyStateTitle}>No recent scans yet</Text>
+          <Text style={styles.emptyStateText}>
+            Scan a product QR code to see it appear here.
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={recentScans}
+          renderItem={renderProductCard}
+          keyExtractor={(item, index) => index.toString()}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -175,6 +186,23 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: colors.gray600,
+    textAlign: 'center',
   },
   productCard: {
     backgroundColor: '#fff',
