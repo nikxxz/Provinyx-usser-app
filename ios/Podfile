@@ -23,6 +23,11 @@ target 'Unveilix' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
+  # Link vector icon fonts
+  target.build_configurations.each do |config|
+    config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+  end
+
   post_install do |installer|
     react_native_post_install(
       installer,
@@ -30,5 +35,14 @@ target 'Unveilix' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+    
+    # Copy vector icons fonts to Xcode project
+    installer.pods_project.targets.each do |target|
+      if target.name == 'react-native-vector-icons'
+        target.build_configurations.each do |config|
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+        end
+      end
+    end
   end
 end
