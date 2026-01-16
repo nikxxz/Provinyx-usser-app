@@ -15,12 +15,10 @@ export const scannerDummyProducts = [
       serialNumber: 'AV2025TV55991234',
       batchId: 'AV-BATCH-TV-25-Q2-001',
       manufactureDate: '25_JUL_2025',
-      // Percentage scores for product cards
       approved: 87,
       renewability: 76,
       ownership: 92,
       warrantyScore: 85,
-      // Trend data for digital passport
       trends: {
         productName: {
           direction: 'up',
@@ -43,7 +41,6 @@ export const scannerDummyProducts = [
           text: '1.8% Up from yesterday',
         },
       },
-      // Additional product info fields
       gtin: '09876543210123456',
       lotNumber: 'AV-LOT-TV55-2025-Q2',
       serialDisplay: 'AV2025TV55991234',
@@ -89,12 +86,10 @@ export const scannerDummyProducts = [
       serialNumber: 'AT2024HP789456',
       batchId: 'BATCH-HP-2024-Q1',
       manufactureDate: '15_MAR_2024',
-      // Percentage scores for product cards
       approved: 94,
       renewability: 68,
       ownership: 88,
       warrantyScore: 72,
-      // Trend data for digital passport
       trends: {
         productName: {
           direction: 'up',
@@ -117,7 +112,6 @@ export const scannerDummyProducts = [
           text: '2.3% Down from yesterday',
         },
       },
-      // Additional product info fields
       gtin: '05901234123457890',
       lotNumber: 'AT-HP-2024-Q1-LOT',
       serialDisplay: 'AT2024HP789456',
@@ -161,12 +155,10 @@ export const scannerDummyProducts = [
       serialNumber: 'FT2024FW123789',
       batchId: 'BATCH-FW-2024-A',
       manufactureDate: '10_FEB_2024',
-      // Percentage scores for product cards
       approved: 82,
       renewability: 55,
       ownership: 78,
       warrantyScore: 60,
-      // Trend data for digital passport
       trends: {
         productName: {
           direction: 'up',
@@ -189,7 +181,6 @@ export const scannerDummyProducts = [
           text: '2.0% Up from yesterday',
         },
       },
-      // Additional product info fields
       gtin: '07622210449283123',
       lotNumber: 'FT-FW-2024-A-BATCH',
       serialDisplay: 'FT2024FW123789',
@@ -231,12 +222,12 @@ export const scannerDummyProducts = [
       serialNumber: 'SW2024SPK456123',
       batchId: 'BATCH-SPK-2024-B',
       manufactureDate: '20_APR_2024',
-      // Percentage scores for product cards
+ 
       approved: 89,
       renewability: 64,
       ownership: 95,
       warrantyScore: 68,
-      // Trend data for digital passport
+
       trends: {
         productName: {
           direction: 'up',
@@ -259,7 +250,7 @@ export const scannerDummyProducts = [
           text: '3.4% Up from yesterday',
         },
       },
-      // Additional product info fields
+
       gtin: '04006381333931456',
       lotNumber: 'SW-SPK-2024-B-LOT',
       serialDisplay: 'SW2024SPK456123',
@@ -303,12 +294,12 @@ export const scannerDummyProducts = [
       serialNumber: 'CB2024CF567321',
       batchId: 'CB-BATCH-CF-24-Q3',
       manufactureDate: '05_JUN_2024',
-      // Percentage scores for product cards
+ 
       approved: 91,
       renewability: 72,
       ownership: 86,
       warrantyScore: 75,
-      // Trend data for digital passport
+ 
       trends: {
         productName: {
           direction: 'up',
@@ -331,7 +322,7 @@ export const scannerDummyProducts = [
           text: '1.1% Down from yesterday',
         },
       },
-      // Additional product info fields
+
       gtin: '08901234567890123',
       lotNumber: 'CB-CF-24-Q3-BATCH',
       serialDisplay: 'CB2024CF567321',
@@ -373,12 +364,12 @@ export const scannerDummyProducts = [
       serialNumber: 'PG2024GM998877',
       batchId: 'PG-GM-24-BATCH-01',
       manufactureDate: '18_MAY_2024',
-      // Percentage scores for product cards
+ 
       approved: 85,
       renewability: 58,
       ownership: 93,
       warrantyScore: 62,
-      // Trend data for digital passport
+  
       trends: {
         productName: {
           direction: 'up',
@@ -401,7 +392,7 @@ export const scannerDummyProducts = [
           text: '1.7% Up from yesterday',
         },
       },
-      // Additional product info fields
+
       gtin: '05012345678901234',
       lotNumber: 'PG-GM-24-BATCH-01',
       serialDisplay: 'PG2024GM998877',
@@ -444,12 +435,12 @@ export const scannerDummyProducts = [
       serialNumber: 'NH2024RF450L001',
       batchId: 'NH-RF-24-Q2-CORE',
       manufactureDate: '12_APR_2024',
-      // Percentage scores for product cards
+
       approved: 96,
       renewability: 81,
       ownership: 89,
       warrantyScore: 95,
-      // Trend data for digital passport
+  
       trends: {
         productName: {
           direction: 'up',
@@ -472,7 +463,7 @@ export const scannerDummyProducts = [
           text: '6.2% Up from yesterday',
         },
       },
-      // Additional product info fields
+
       gtin: '08412345678902345',
       lotNumber: 'NH-RF-24-Q2-CORE',
       serialDisplay: 'NH2024RF450L001',
@@ -515,12 +506,12 @@ export const scannerDummyProducts = [
       serialNumber: 'LC2024CAM240012',
       batchId: 'LC-CAM24-APS-Q3',
       manufactureDate: '30_JUL_2024',
-      // Percentage scores for product cards
+
       approved: 88,
       renewability: 52,
       ownership: 84,
       warrantyScore: 73,
-      // Trend data for digital passport
+  
       trends: {
         productName: {
           direction: 'up',
@@ -543,7 +534,7 @@ export const scannerDummyProducts = [
           text: '2.7% Down from yesterday',
         },
       },
-      // Additional product info fields
+
       gtin: '07312345678903456',
       lotNumber: 'LC-CAM24-APS-Q3',
       serialDisplay: 'LC2024CAM240012',
@@ -586,12 +577,12 @@ export const scannerDummyProducts = [
       serialNumber: 'PB2024AP360999',
       batchId: 'PB-AP-360-Q1-24',
       manufactureDate: '22_JAN_2024',
-      // Percentage scores for product cards
+
       approved: 93,
       renewability: 79,
       ownership: 91,
       warrantyScore: 82,
-      // Trend data for digital passport
+ 
       trends: {
         productName: {
           direction: 'up',
@@ -614,7 +605,7 @@ export const scannerDummyProducts = [
           text: '2.9% Up from yesterday',
         },
       },
-      // Additional product info fields
+
       gtin: '06901234567894567',
       lotNumber: 'PB-AP-360-Q1-24',
       serialDisplay: 'PB2024AP360999',
@@ -656,12 +647,12 @@ export const scannerDummyProducts = [
       serialNumber: 'UM2024ES350777',
       batchId: 'UM-ES-24-VELO-01',
       manufactureDate: '08_AUG_2024',
-      // Percentage scores for product cards
+ 
       approved: 80,
       renewability: 71,
       ownership: 87,
       warrantyScore: 70,
-      // Trend data for digital passport
+ 
       trends: {
         productName: {
           direction: 'up',
@@ -684,7 +675,7 @@ export const scannerDummyProducts = [
           text: '3.8% Up from yesterday',
         },
       },
-      // Additional product info fields
+
       gtin: '08801234567895678',
       lotNumber: 'UM-ES-24-VELO-01',
       serialDisplay: 'UM2024ES350777',

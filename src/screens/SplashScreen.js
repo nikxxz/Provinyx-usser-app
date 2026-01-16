@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { View, Image, StyleSheet, StatusBar, Text } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { colors } from '../constants/colors';
 
@@ -14,12 +13,12 @@ const SplashScreen = ({ navigation }) => {
   }, [navigation]);
 
   return (
-    <Animated.View 
+    <Animated.View
       style={[styles.container, { exiting: FadeOut.duration(500) }]}
     >
       <StatusBar
         barStyle="light-content"
-        backgroundColor="#f0f4f8"
+        backgroundColor={colors.background}
         translucent={false}
       />
       <View style={styles.content}>
@@ -55,7 +54,7 @@ const SplashScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f4f8',
+    backgroundColor: colors.background,
     justifyContent: 'space-between',
     paddingVertical: 40,
   },

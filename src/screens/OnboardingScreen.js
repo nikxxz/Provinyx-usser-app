@@ -36,7 +36,7 @@ const OnboardingScreen = ({ navigation }) => {
     >
       <StatusBar
         barStyle="dark-content"
-        backgroundColor="#ffffff"
+        backgroundColor={colors.white}
         translucent={false}
       />
 

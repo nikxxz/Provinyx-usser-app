@@ -362,7 +362,7 @@ const DigitalPassportScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -371,6 +371,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
   },
@@ -390,7 +391,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   imageContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     padding: 24,
     alignItems: 'center',
     marginBottom: 16,
@@ -418,6 +419,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   infoCard: {
+    backgroundColor: colors.white,
     flex: 1,
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -425,6 +427,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray200,
     shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,

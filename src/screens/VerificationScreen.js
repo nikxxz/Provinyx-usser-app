@@ -216,7 +216,7 @@ const VerificationScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
   },
   keyboardAvoid: {
     flex: 1,
@@ -260,6 +260,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   inputWrapper: {
+    backgroundColor: colors.white,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,

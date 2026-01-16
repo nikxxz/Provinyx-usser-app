@@ -51,13 +51,10 @@ const SignInScreen = ({ navigation }) => {
     setLoading(true);
 
     try {
-      // Validate user against users.js
       const user = validateUser(username, password);
 
       if (user) {
-        // Login user via context
         login(username, password);
-        // User found and password matches
         setUsername('');
         setPassword('');
         setUsernameError('');
@@ -202,7 +199,7 @@ const SignInScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
   },
   keyboardAvoid: {
     flex: 1,
@@ -246,6 +243,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   inputWrapper: {
+    backgroundColor: colors.white,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -253,7 +251,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#ffffff',
   },
   inputWrapperError: {
     borderColor: '#dc2626',

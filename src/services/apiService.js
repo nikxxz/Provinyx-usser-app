@@ -1,7 +1,7 @@
 
 class ApiService {
   constructor() {
-    this.baseURL = 'https://api.example.com';
+    this.baseURL = 'https://abc.com';
     this.timeout = 10000;
   }
 
@@ -60,7 +60,6 @@ class ApiService {
   getHeaders() {
     return {
       'Content-Type': 'application/json',
-      // Add authorization token if available
       // 'Authorization': `Bearer ${getToken()}`,
     };
   }

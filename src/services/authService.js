@@ -20,7 +20,6 @@ class AuthService {
 
   async register(userData) {
     try {
-      // TODO: Call your registration API
       // const response = await apiService.post('/auth/register', userData);
       console.log('Register called with:', userData);
       return { success: true };
@@ -33,7 +32,6 @@ class AuthService {
  
   async logout() {
     try {
-      // TODO: Call your logout API if needed
       this.user = null;
       this.token = null;
       this.isAuthenticated = false;
@@ -46,7 +44,6 @@ class AuthService {
 
   async refreshToken() {
     try {
-      // TODO: Call your token refresh API
       console.log('Token refreshed');
       return { success: true };
     } catch (error) {
