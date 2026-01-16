@@ -16,7 +16,8 @@ import ScannerScreen from '../screens/ScannerScreen';
 const Stack = createNativeStackNavigator();
 
 const RootNavigator = () => {
-  const { isAuthenticated, validateUser, logout } = useContext(AuthContext);
+  const { isAuthenticated, validateUser, logout, isLoading } =
+    useContext(AuthContext);
 
   // Periodic auth validation check
   useEffect(() => {
@@ -31,6 +32,23 @@ const RootNavigator = () => {
 
     return () => clearInterval(interval);
   }, [isAuthenticated, validateUser, logout]);
+
+  // Show splash while loading auth state
+  if (isLoading) {
+    return (
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen
+            name="Splash"
+            component={SplashScreen}
+            options={{ animationEnabled: false }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    );
+  }
+
+  console.log('Navigation render - isAuthenticated:', isAuthenticated());
 
   return (
     <NavigationContainer

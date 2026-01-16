@@ -1,13 +1,12 @@
-
-// API Configuration
-export const API_BASE_URL = 'https://api.example.com';
-export const API_TIMEOUT = 10000;
+// Export all configurations
+export * from './envConfig';
+export * from './apiConfig';
+export * from './authConfig';
 
 // Screen Names
 export const SCREENS = {
   HOME: 'Home',
   DETAILS: 'Details',
-
 };
 
 // Colors

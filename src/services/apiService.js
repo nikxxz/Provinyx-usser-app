@@ -1,10 +1,18 @@
+import {
+  getApiBaseUrl,
+  API_CONFIG,
+  CONTENT_TYPES,
+  REQUEST_HEADERS,
+} from '../constants';
 
 class ApiService {
   constructor() {
-    this.baseURL = 'https://abc.com';
-    this.timeout = 10000;
+    this.timeout = API_CONFIG.TIMEOUT;
   }
 
+  getBaseUrl() {
+    return getApiBaseUrl();
+  }
 
   async get(endpoint) {
     try {
@@ -20,11 +28,17 @@ class ApiService {
 
   async post(endpoint, data) {
     try {
-      const response = await fetch(`${this.baseURL}${endpoint}`, {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+      const response = await fetch(`${this.getBaseUrl()}${endpoint}`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(data),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
       return this.handleResponse(response);
     } catch (error) {
       throw this.handleError(error);
@@ -44,7 +58,6 @@ class ApiService {
     }
   }
 
-
   async delete(endpoint) {
     try {
       const response = await fetch(`${this.baseURL}${endpoint}`, {
@@ -57,23 +70,45 @@ class ApiService {
     }
   }
 
-  getHeaders() {
-    return {
-      'Content-Type': 'application/json',
-      // 'Authorization': `Bearer ${getToken()}`,
+  getHeaders(includeAuth = false) {
+    const headers = {
+      [REQUEST_HEADERS.CONTENT_TYPE]: CONTENT_TYPES.JSON,
+      [REQUEST_HEADERS.ACCEPT]: CONTENT_TYPES.JSON,
     };
+
+    if (includeAuth) {
+      // TODO: Add token when implementing token storage
+      // headers[REQUEST_HEADERS.AUTHORIZATION] = `Bearer ${getToken()}`;
+    }
+
+    return headers;
   }
 
   async handleResponse(response) {
-    if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status}`);
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      const error = new Error(data.message || `HTTP Error: ${response.status}`);
+      error.statusCode = data.statusCode || response.status;
+      error.errorCode = data.error || 'UNKNOWN_ERROR';
+      error.data = data;
+      throw error;
     }
-    return await response.json();
+
+    return data;
   }
 
   handleError(error) {
     console.error('API Error:', error);
-    return error;
+
+    if (error.name === 'AbortError') {
+      const timeoutError = new Error('Request timeout');
+      timeoutError.statusCode = 408;
+      timeoutError.errorCode = 'TIMEOUT';
+      throw timeoutError;
+    }
+
+    throw error;
   }
 }
 

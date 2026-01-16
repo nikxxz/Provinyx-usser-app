@@ -10,12 +10,13 @@ import {
   Platform,
   ActivityIndicator,
   Dimensions,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../constants/colors';
-import { validateUser } from '../constants/users';
 import { AuthContext } from '../context/AuthContext';
+import authService from '../services/authService';
 import CustomTextInput from '../components/CustomTextInput';
 
 const { width, height } = Dimensions.get('window');
@@ -24,9 +25,9 @@ const SignInScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [usernameError, setUsernameError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [errorModal, setErrorModal] = useState({ visible: false, message: '' });
   const { login } = useContext(AuthContext);
 
   const handleLogin = async () => {
@@ -48,26 +49,17 @@ const SignInScreen = ({ navigation }) => {
       return;
     }
 
-    setLoading(true);
+    // Immediately navigate to AuthSuccessScreen with credentials
+    // API call will happen in the background there
+    setUsername('');
+    setPassword('');
+    setUsernameError('');
+    setPasswordError('');
 
-    try {
-      const user = validateUser(username, password);
-
-      if (user) {
-        login(username, password);
-        setUsername('');
-        setPassword('');
-        setUsernameError('');
-        setPasswordError('');
-        navigation.replace('AuthSuccess', { authType: 'Sign In' });
-      } else {
-        setPasswordError('Incorrect username or password. Please try again.');
-      }
-    } catch (error) {
-      setPasswordError('An error occurred. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    navigation.replace('AuthSuccess', {
+      authType: 'Sign In',
+      credentials: { username, password },
+    });
   };
 
   const handleForgotPassword = () => {
@@ -83,6 +75,10 @@ const SignInScreen = ({ navigation }) => {
 
   const handleBackPress = () => {
     navigation.goBack();
+  };
+
+  const closeErrorModal = () => {
+    setErrorModal({ visible: false, message: '' });
   };
 
   return (
@@ -118,7 +114,6 @@ const SignInScreen = ({ navigation }) => {
                   setUsernameError('');
                 }}
                 autoCapitalize="none"
-                editable={!loading}
                 error={!!usernameError}
               />
               {usernameError ? (
@@ -140,7 +135,6 @@ const SignInScreen = ({ navigation }) => {
                   setPasswordError('');
                 }}
                 secureTextEntry={!showPassword}
-                editable={!loading}
                 error={!!passwordError}
                 icon={
                   <Icon
@@ -170,28 +164,52 @@ const SignInScreen = ({ navigation }) => {
             <TouchableOpacity
               style={[
                 styles.signInButton,
-                loading && styles.signInButtonDisabled,
+                (!username.trim() || !password.trim()) &&
+                  styles.signInButtonDisabled,
               ]}
               onPress={handleLogin}
-              disabled={loading}
+              disabled={!username.trim() || !password.trim()}
             >
-              {loading ? (
-                <ActivityIndicator color="#ffffff" size="small" />
-              ) : (
-                <Text style={styles.signInButtonText}>Sign In</Text>
-              )}
+              <Text style={styles.signInButtonText}>Sign In</Text>
             </TouchableOpacity>
 
             {/* Sign Up Link */}
             <View style={styles.signupContainer}>
               <Text style={styles.signupText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={handleSignUp} disabled={loading}>
+              <TouchableOpacity onPress={handleSignUp}>
                 <Text style={styles.signupLink}>Sign Up Now</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Error Modal */}
+      <Modal
+        transparent={true}
+        visible={errorModal.visible}
+        animationType="fade"
+        onRequestClose={closeErrorModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Icon
+              name="alert-circle"
+              size={48}
+              color={colors.danger || '#FF3B30'}
+              style={styles.modalIcon}
+            />
+            <Text style={styles.modalTitle}>Login Failed</Text>
+            <Text style={styles.modalMessage}>{errorModal.message}</Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={closeErrorModal}
+            >
+              <Text style={styles.modalButtonText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -310,6 +328,59 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.primary,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  modalContent: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    minWidth: '80%',
+  },
+  modalIcon: {
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: colors.gray600,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  modalButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 8,
+    minWidth: 120,
+  },
+  modalButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
 

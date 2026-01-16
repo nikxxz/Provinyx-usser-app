@@ -7,16 +7,12 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../constants/colors';
-import { addUser, findUserByUsername } from '../constants/users';
 import CustomTextInput from '../components/CustomTextInput';
-
-const { width, height } = Dimensions.get('window');
 
 const SignUpScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
@@ -26,7 +22,6 @@ const SignUpScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({
     username: '',
     email: '',
@@ -56,9 +51,6 @@ const SignUpScreen = ({ navigation }) => {
 
     if (!username.trim()) {
       newErrors.username = 'Please enter a username';
-      hasError = true;
-    } else if (findUserByUsername(username)) {
-      newErrors.username = 'Username already exists';
       hasError = true;
     }
 
@@ -96,35 +88,25 @@ const SignUpScreen = ({ navigation }) => {
       return;
     }
 
-    setLoading(true);
+    // Immediately navigate to AuthSuccessScreen with registration data
+    // API call will happen in the background there
+    const userData = {
+      username,
+      email,
+      phone,
+      password,
+    };
 
-    try {
-      // Add user to users array in constants
-      const newUser = {
-        username,
-        email,
-        phone,
-        password,
-      };
-      addUser(newUser);
+    setUsername('');
+    setEmail('');
+    setPhone('');
+    setPassword('');
+    setConfirmPassword('');
 
-      // Clear form
-      setUsername('');
-      setEmail('');
-      setPhone('');
-      setPassword('');
-      setConfirmPassword('');
-
-      // Navigate to verification screen with username and email
-      navigation.replace('Verification', { email, username });
-    } catch (error) {
-      setErrors({
-        ...errors,
-        username: 'An error occurred during registration. Please try again.',
-      });
-    } finally {
-      setLoading(false);
-    }
+    navigation.replace('AuthSuccess', {
+      authType: 'Sign Up',
+      credentials: userData,
+    });
   };
 
   const handleBackPress = () => {
@@ -168,7 +150,6 @@ const SignUpScreen = ({ navigation }) => {
                   setUsername(text);
                   setErrors({ ...errors, username: '' });
                 }}
-                editable={!loading}
                 error={!!errors.username}
               />
               {errors.username ? (
@@ -191,7 +172,6 @@ const SignUpScreen = ({ navigation }) => {
                 }}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                editable={!loading}
                 error={!!errors.email}
               />
               {errors.email ? (
@@ -213,7 +193,6 @@ const SignUpScreen = ({ navigation }) => {
                   setErrors({ ...errors, phone: '' });
                 }}
                 keyboardType="phone-pad"
-                editable={!loading}
                 error={!!errors.phone}
               />
               {errors.phone ? (
@@ -235,7 +214,6 @@ const SignUpScreen = ({ navigation }) => {
                   setErrors({ ...errors, password: '' });
                 }}
                 secureTextEntry={!showPassword}
-                editable={!loading}
                 error={!!errors.password}
                 icon={
                   <Icon
@@ -266,7 +244,6 @@ const SignUpScreen = ({ navigation }) => {
                   setErrors({ ...errors, confirmPassword: '' });
                 }}
                 secureTextEntry={!showConfirmPassword}
-                editable={!loading}
                 error={!!errors.confirmPassword}
                 icon={
                   <Icon
@@ -287,24 +264,16 @@ const SignUpScreen = ({ navigation }) => {
 
             {/* Send Code Button */}
             <TouchableOpacity
-              style={[
-                styles.signUpButton,
-                loading && styles.signUpButtonDisabled,
-              ]}
+              style={styles.signUpButton}
               onPress={handleSignUp}
-              disabled={loading}
             >
-              {loading ? (
-                <ActivityIndicator color="#ffffff" size="small" />
-              ) : (
-                <Text style={styles.signUpButtonText}>Send Code</Text>
-              )}
+              <Text style={styles.signUpButtonText}>Send Code</Text>
             </TouchableOpacity>
 
             {/* Sign In Link */}
             <View style={styles.signinContainer}>
               <Text style={styles.signinText}>Already have an Account? </Text>
-              <TouchableOpacity onPress={handleSignIn} disabled={loading}>
+              <TouchableOpacity onPress={handleSignIn}>
                 <Text style={styles.signinLink}>Sign in here</Text>
               </TouchableOpacity>
             </View>
@@ -360,27 +329,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 10,
   },
-  inputWrapper: {
-    backgroundColor: colors.white,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: '#ffffff',
-  },
-  inputWrapperError: {
-    borderColor: '#dc2626',
-    borderWidth: 2,
-  },
-  input: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.text,
-    paddingVertical: 0,
-  },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -396,7 +344,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.gray500,
     marginTop: 8,
-    color: colors.gray500,
   },
   signUpButton: {
     backgroundColor: colors.primary,
