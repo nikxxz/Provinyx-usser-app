@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ScrollView,
   Dimensions,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,9 +21,10 @@ const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.7;
 
 const HomeScreen = ({ navigation }) => {
-  const { validateUser, logout } = useContext(AuthContext);
-  const { state } = useStore();
-  const recentScans = state.scanHistory || [];
+  const { validateUser, logout, currentUser } = useContext(AuthContext);
+  const { state, fetchUserHistory, getProductDetails } = useStore();
+  const [recentProducts, setRecentProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
   // Check auth status when screen comes into focus
   useFocusEffect(
@@ -42,13 +44,103 @@ const HomeScreen = ({ navigation }) => {
     }, [validateUser, logout, navigation]),
   );
 
+  // Fetch history from API when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadHistory = async () => {
+        // Prefer ID, but validate it first
+        if (currentUser?.id) {
+          const userId =
+            typeof currentUser.id === 'string'
+              ? parseInt(currentUser.id, 10)
+              : currentUser.id;
+
+          if (Number.isInteger(userId) && userId > 0) {
+            await fetchUserHistory(userId);
+            return;
+          }
+        }
+
+        // Fallback to email
+        if (currentUser?.email) {
+          await fetchUserHistory(currentUser.email);
+        }
+      };
+
+      loadHistory();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentUser?.id, currentUser?.email]),
+  );
+
+  // Load product details for recent scans
+  useEffect(() => {
+    const loadRecentProducts = async () => {
+      const historyIds = state.scanHistory || [];
+      if (historyIds.length === 0) {
+        setRecentProducts([]);
+        setLoadingProducts(false);
+        return;
+      }
+
+      setLoadingProducts(true);
+
+      try {
+        // Load products for first 3 items
+        const productsToLoad = historyIds.slice(0, 3);
+        const productsData = await Promise.all(
+          productsToLoad.map(async productId => {
+            const productData = await getProductDetails(productId);
+            if (productData) {
+              return {
+                productId,
+                productData,
+                details: formatProductDetails(productData),
+              };
+            }
+            return null;
+          }),
+        );
+
+        // Filter out null values
+        setRecentProducts(productsData.filter(p => p !== null));
+      } catch (error) {
+        console.error('❌ Error loading recent products:', error);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    loadRecentProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.scanHistory]);
+
+  // Helper function to format product details
+  const formatProductDetails = productData => {
+    const { productSummary, categories } = productData || {};
+
+    return {
+      image: productSummary?.image ? { uri: productSummary.image } : null,
+      productName: productSummary?.productName || 'Unknown Product',
+      approved: categories?.environmentalFootprint?.pefCompliant ? 85 : 75,
+      renewability: categories?.sustainability?.recycledContentPercent || 70,
+      ownership: 90,
+      warrantyScore: 80,
+    };
+  };
+
   const renderRecentScanCard = (product, index) => {
-    const { details } = product;
+    const { details, productData, productId } = product;
 
     return (
       <View key={index} style={styles.recentCard}>
         <View style={styles.cardImageContainer}>
-          <Image source={details.image} style={styles.cardImage} />
+          {details.image ? (
+            <Image source={details.image} style={styles.cardImage} />
+          ) : (
+            <View style={styles.placeholderImage}>
+              <Icon name="image-off" size={40} color="#ccc" />
+            </View>
+          )}
           <View style={styles.verifiedBadge}>
             <Image
               source={require('../../assets/Check.png')}
@@ -117,7 +209,12 @@ const HomeScreen = ({ navigation }) => {
 
         <TouchableOpacity
           style={styles.viewPassportBtn}
-          onPress={() => navigation.navigate('DigitalPassport', { product })}
+          onPress={() =>
+            navigation.navigate('DigitalPassport', {
+              productData: productData,
+              barcode: productId,
+            })
+          }
         >
           <Text style={styles.viewPassportBtnText}>View Passport</Text>
           <Icon name="arrow-right" size={16} color="#fff" />
@@ -136,21 +233,13 @@ const HomeScreen = ({ navigation }) => {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.headerIcon}>
-            <Icon name="arrow-left" size={24} color={colors.text} />
+          <View style={styles.headerIcon} />
+          <TouchableOpacity
+            style={styles.headerIcon}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <Icon name="account-circle-outline" size={24} color={colors.text} />
           </TouchableOpacity>
-          <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.headerIcon}>
-              <Icon name="bell-outline" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.headerIcon}>
-              <Icon
-                name="account-circle-outline"
-                size={24}
-                color={colors.text}
-              />
-            </TouchableOpacity>
-          </View>
         </View>
 
         {/* Hero Section */}
@@ -195,7 +284,12 @@ const HomeScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          {recentScans.length === 0 ? (
+          {state.isLoadingHistory || loadingProducts ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.loadingText}>Loading recent scans...</Text>
+            </View>
+          ) : recentProducts.length === 0 ? (
             <View style={styles.recentsEmptyContainer}>
               <Text style={styles.recentsEmptyTitle}>No scans yet</Text>
               <Text style={styles.recentsEmptyText}>
@@ -208,9 +302,9 @@ const HomeScreen = ({ navigation }) => {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.recentsScrollContent}
             >
-              {recentScans
-                .slice(0, 5)
-                .map((product, index) => renderRecentScanCard(product, index))}
+              {recentProducts.map((product, index) =>
+                renderRecentScanCard(product, index),
+              )}
             </ScrollView>
           )}
         </View>
@@ -342,6 +436,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.gray600,
   },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: colors.gray600,
+  },
   recentCard: {
     width: CARD_WIDTH,
     backgroundColor: '#fff',
@@ -368,6 +473,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  placeholderImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   verifiedBadge: {
     position: 'absolute',

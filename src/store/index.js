@@ -1,13 +1,14 @@
 import { createContext, useState, useContext, useEffect } from 'react';
 import { NativeModules } from 'react-native';
+import { getUserHistory } from '../services/historyService';
+import { getProductByGtin } from '../services/productService';
 
 let AsyncStorage = null;
 try {
   const native =
     NativeModules.RNCAsyncStorage || NativeModules.RNC_AsyncStorage;
   if (native) {
-    // Only require AsyncStorage if the native module is available
-    // to avoid runtime crashes when it is not linked.
+
     AsyncStorage = require('@react-native-async-storage/async-storage').default;
   }
 } catch (e) {
@@ -17,7 +18,13 @@ try {
 const StoreContext = createContext();
 
 export const StoreProvider = ({ children }) => {
-  const [state, setState] = useState({ scanHistory: [] });
+  const [state, setState] = useState({
+    scanHistory: [], 
+    productCache: {}, 
+    isLoadingHistory: false,
+    historyLastFetched: null,
+    historyError: null,
+  });
 
   // Load persisted store state on mount
   useEffect(() => {
@@ -33,17 +40,168 @@ export const StoreProvider = ({ children }) => {
           setState(prev => ({ ...prev, ...parsed }));
         }
       } catch (e) {
-        // Ignore storage errors to avoid breaking the app
+
       }
     };
 
     loadState();
   }, []);
 
+  
+  const fetchUserHistory = async (emailOrId, forceRefresh = false) => {
+    if (!emailOrId) {
+      console.warn('⚠️ No email/ID provided for fetching history');
+      return;
+    }
+
+    // Additional validation 
+    const isEmail = typeof emailOrId === 'string' && emailOrId.includes('@');
+    if (!isEmail) {
+      const id =
+        typeof emailOrId === 'string' ? parseInt(emailOrId, 10) : emailOrId;
+      if (!Number.isInteger(id) || id <= 0) {
+        console.error(
+          '❌ Invalid user ID:',
+          emailOrId,
+          '- skipping history fetch',
+        );
+        return;
+      }
+    }
+
+ 
+    const now = Date.now();
+    const fiveMinutes = 5 * 60 * 1000;
+    if (
+      !forceRefresh &&
+      state.historyLastFetched &&
+      now - state.historyLastFetched < fiveMinutes
+    ) {
+      console.log('📋 Using cached history (fetched recently)');
+      return;
+    }
+
+    // Prevent concurrent requests
+    if (state.isLoadingHistory && !forceRefresh) {
+      console.log('⏳ History fetch already in progress');
+      return;
+    }
+
+    setState(prev => ({ ...prev, isLoadingHistory: true, historyError: null }));
+
+    try {
+      const response = await getUserHistory(emailOrId);
+
+      if (response.success && response.data?.history) {
+        // History contains array of product IDs/barcodes
+        const historyIds = response.data.history || [];
+
+        setState(prev => ({
+          ...prev,
+          scanHistory: historyIds,
+          isLoadingHistory: false,
+          historyLastFetched: now,
+          historyError: null,
+        }));
+
+        console.log('✅ History updated from API:', historyIds.length, 'items');
+      } else if (response.success && response.data?.historyCount === 0) {
+        // User has no history yet 
+        setState(prev => ({
+          ...prev,
+          scanHistory: [],
+          isLoadingHistory: false,
+          historyLastFetched: now,
+          historyError: null,
+        }));
+        console.log('✅ New user - no history yet');
+      } else {
+        throw new Error(response.message || 'Invalid response from server');
+      }
+    } catch (err) {
+      console.error('❌ Failed to fetch history:', err);
+      const errorMessage = err?.message || 'Failed to fetch history';
+      setState(prev => ({
+        ...prev,
+        isLoadingHistory: false,
+        historyError: errorMessage,
+        historyLastFetched: now, 
+      }));
+    }
+  };
+
+
+  const getProductDetails = async productId => {
+    // Check cache first
+    if (state.productCache[productId]) {
+      console.log('📦 Using cached product data for:', productId);
+      return state.productCache[productId];
+    }
+
+    // Fetch from API
+    try {
+      console.log('🔍 Fetching product details for:', productId);
+      const response = await getProductByGtin(productId);
+
+      if (response.success && response.data) {
+        // Cache the product data
+        setState(prev => ({
+          ...prev,
+          productCache: {
+            ...prev.productCache,
+            [productId]: response.data,
+          },
+        }));
+
+        return response.data;
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch product details:', error);
+      return null;
+    }
+  };
+
+
+  const cacheProductData = (productId, productData) => {
+    setState(prev => ({
+      ...prev,
+      productCache: {
+        ...prev.productCache,
+        [productId]: productData,
+      },
+    }));
+  };
+
+
+  const addToLocalHistory = productId => {
+    setState(prev => {
+      const existingHistory = prev.scanHistory || [];
+      const filtered = existingHistory.filter(id => id !== productId);
+      return {
+        ...prev,
+        scanHistory: [productId, ...filtered],
+      };
+    });
+  };
+
+
   const addScanToHistory = product => {
-    setState(prevState => ({
-      ...prevState,
-      scanHistory: [product, ...(prevState.scanHistory || [])],
+
+    const productId = product.barcode || product.productId;
+    if (productId) {
+      addToLocalHistory(productId);
+
+      if (product.productData) {
+        cacheProductData(productId, product.productData);
+      }
+    }
+  };
+
+ 
+  const clearProductCache = () => {
+    setState(prev => ({
+      ...prev,
+      productCache: {},
     }));
   };
 
@@ -67,7 +225,12 @@ export const StoreProvider = ({ children }) => {
   const value = {
     state,
     setState,
-    addScanToHistory,
+    addScanToHistory, // Legacy
+    fetchUserHistory,
+    getProductDetails,
+    cacheProductData,
+    addToLocalHistory,
+    clearProductCache,
   };
 
   return (

@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthContext } from '../context/AuthContext';
 import SplashScreen from '../screens/SplashScreen';
+import IntroSlidesScreen from '../screens/IntroSlidesScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import SignInScreen from '../screens/SignInScreen';
 import SignUpScreen from '../screens/SignUpScreen';
@@ -12,6 +13,7 @@ import HomeScreen from '../screens/HomeScreen';
 import RecentsScreen from '../screens/RecentsScreen';
 import DigitalPassportScreen from '../screens/DigitalPassportScreen';
 import ScannerScreen from '../screens/ScannerScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -75,6 +77,7 @@ const RootNavigator = () => {
               component={SplashScreen}
               options={{ animationEnabled: false }}
             />
+            <Stack.Screen name="IntroSlides" component={IntroSlidesScreen} />
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="SignIn" component={SignInScreen} />
             <Stack.Screen name="SignUp" component={SignUpScreen} />
@@ -90,6 +93,7 @@ const RootNavigator = () => {
               name="DigitalPassport"
               component={DigitalPassportScreen}
             />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="Verification" component={VerificationScreen} />
             <Stack.Screen name="AuthSuccess" component={AuthSuccessScreen} />
           </>

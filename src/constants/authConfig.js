@@ -1,7 +1,3 @@
-/**
- * Authentication Configuration
- * This file contains authentication-related constants and configurations
- */
 
 // Authentication types
 export const AUTH_TYPES = {

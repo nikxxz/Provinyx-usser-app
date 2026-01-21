@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  Dimensions,
   StatusBar,
   ActivityIndicator,
   Linking,
@@ -19,16 +18,17 @@ import {
   useCodeScanner,
 } from 'react-native-vision-camera';
 import { colors } from '../constants/colors';
-import { scannerDummyProducts } from '../data/DummyData';
 import { AuthContext } from '../context/AuthContext';
+import { getProductByGtin } from '../services/productService';
+import { addScanToHistoryBackground } from '../services/historyService';
 import { useStore } from '../store';
 
 const ScannerScreen = ({ navigation }) => {
   const [hasPermission, setHasPermission] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [scannedCodes, setScannedCodes] = useState(new Set());
-  const { validateUser, logout } = useContext(AuthContext);
-  const { addScanToHistory } = useStore();
+  const { validateUser, logout, currentUser } = useContext(AuthContext);
+  const { state, addToLocalHistory, cacheProductData } = useStore();
   const device = useCameraDevice('back');
 
   // Check auth status when screen comes into focus
@@ -81,7 +81,7 @@ const ScannerScreen = ({ navigation }) => {
   }, [navigation]);
 
   // Handle QR code scan
-  const handleScan = barcode => {
+  const handleScan = async barcode => {
     // Prevent duplicate scans
     if (scannedCodes.has(barcode)) {
       return;
@@ -90,25 +90,61 @@ const ScannerScreen = ({ navigation }) => {
     setScannedCodes(prev => new Set(prev).add(barcode));
     setIsActive(false);
 
-    // Search for product in dummy data
-    const product = scannerDummyProducts.find(p => p.barcode === barcode);
+    try {
+      console.log('🔍 Scanning barcode:', barcode);
 
-    if (product) {
-      // Valid product found - add to history and navigate directly
-      addScanToHistory(product);
+      // Fetch product data from API
+      const response = await getProductByGtin(barcode);
 
-      navigation.reset({
-        index: 1,
-        routes: [
-          { name: 'Home' },
-          { name: 'DigitalPassport', params: { product } },
-        ],
-      });
-    } else {
-      // Invalid barcode
+      if (response.success && response.data) {
+        console.log('✅ Product found, navigating to Digital Passport');
+
+        // Cache the product data locally
+        cacheProductData(barcode, response.data);
+
+        // Check if product already exists in history
+        const existsInHistory = state.scanHistory?.includes(barcode);
+
+        if (!existsInHistory) {
+          // Add to local history (optimistic update)
+          addToLocalHistory(barcode);
+
+          // Save to API in background (non-blocking)
+          if (currentUser?.email) {
+            addScanToHistoryBackground(currentUser.email, barcode)
+              .then(() => console.log('📝 Scan saved to API history'))
+              .catch(err => console.warn('⚠️ Failed to save to API:', err));
+          } else {
+            console.warn('⚠️ No user email available for saving history');
+          }
+        } else {
+          console.log(
+            'ℹ️ Product already in history, skipping duplicate entry',
+          );
+        }
+
+        // Navigate to Digital Passport with full API response
+        navigation.reset({
+          index: 1,
+          routes: [
+            { name: 'Home' },
+            {
+              name: 'DigitalPassport',
+              params: { productData: response.data, barcode },
+            },
+          ],
+        });
+      } else {
+        throw new Error('Product not found');
+      }
+    } catch (error) {
+      console.error('❌ Scanner Error:', error);
+
+      // Show error alert
       Alert.alert(
-        'Invalid ID',
-        `Barcode "${barcode}" does not match any product in our database. Please try again.`,
+        'Product Not Found',
+        error.message ||
+          `Unable to find product information for "${barcode}". Please try again.`,
         [
           {
             text: 'OK',

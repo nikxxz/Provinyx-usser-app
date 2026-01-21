@@ -8,17 +8,22 @@ import {
   TouchableOpacity,
   StatusBar,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../constants/colors';
 import { AuthContext } from '../context/AuthContext';
+import { getProductByGtin } from '../services/productService';
 
 const DigitalPassportScreen = ({ route, navigation }) => {
-  const { product } = route.params;
-  const { details } = product;
+  const { productData: initialProductData, barcode } = route.params;
   const { validateUser, logout } = useContext(AuthContext);
+
+  const [productData, setProductData] = useState(initialProductData || null);
+  const [isLoading, setIsLoading] = useState(!initialProductData);
+  const [error, setError] = useState(null);
 
   // Check auth status when screen comes into focus
   useFocusEffect(
@@ -39,9 +44,9 @@ const DigitalPassportScreen = ({ route, navigation }) => {
   );
 
   const [expandedSections, setExpandedSections] = useState({
-    metadata: false,
-    composition: false,
-    environmental: false,
+    identification: false,
+    productInfo: false,
+    sustainability: false,
   });
 
   // Animation values
@@ -53,60 +58,90 @@ const DigitalPassportScreen = ({ route, navigation }) => {
   const card4Slide = useRef(new Animated.Value(50)).current;
   const cardsOpacity = useRef(new Animated.Value(0)).current;
 
+  // Fetch product data if not provided
   useEffect(() => {
-    // Animate image first
-    Animated.parallel([
-      Animated.spring(imageScale, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(imageOpacity, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    const fetchProductData = async () => {
+      if (!initialProductData && barcode) {
+        try {
+          console.log('📡 Fetching product data from DigitalPassport screen');
+          setIsLoading(true);
+          const response = await getProductByGtin(barcode);
 
-    // Then animate cards sequentially
-    setTimeout(() => {
+          if (response.success && response.data) {
+            setProductData(response.data);
+            setError(null);
+          } else {
+            setError('Product not found');
+          }
+        } catch (err) {
+          console.error('❌ Error fetching product:', err);
+          setError(err.message || 'Failed to load product data');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchProductData();
+  }, [initialProductData, barcode]);
+
+  // Start animations once data is loaded
+  useEffect(() => {
+    if (productData && !isLoading) {
+      // Animate image first
       Animated.parallel([
-        Animated.timing(cardsOpacity, {
+        Animated.spring(imageScale, {
           toValue: 1,
-          duration: 300,
+          friction: 8,
+          tension: 40,
           useNativeDriver: true,
         }),
-        Animated.stagger(100, [
-          Animated.spring(card1Slide, {
-            toValue: 0,
-            friction: 8,
-            tension: 40,
-            useNativeDriver: true,
-          }),
-          Animated.spring(card2Slide, {
-            toValue: 0,
-            friction: 8,
-            tension: 40,
-            useNativeDriver: true,
-          }),
-          Animated.spring(card3Slide, {
-            toValue: 0,
-            friction: 8,
-            tension: 40,
-            useNativeDriver: true,
-          }),
-          Animated.spring(card4Slide, {
-            toValue: 0,
-            friction: 8,
-            tension: 40,
-            useNativeDriver: true,
-          }),
-        ]),
+        Animated.timing(imageOpacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
       ]).start();
-    }, 300);
+
+      // Then animate cards sequentially
+      setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(cardsOpacity, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.stagger(100, [
+            Animated.spring(card1Slide, {
+              toValue: 0,
+              friction: 8,
+              tension: 40,
+              useNativeDriver: true,
+            }),
+            Animated.spring(card2Slide, {
+              toValue: 0,
+              friction: 8,
+              tension: 40,
+              useNativeDriver: true,
+            }),
+            Animated.spring(card3Slide, {
+              toValue: 0,
+              friction: 8,
+              tension: 40,
+              useNativeDriver: true,
+            }),
+            Animated.spring(card4Slide, {
+              toValue: 0,
+              friction: 8,
+              tension: 40,
+              useNativeDriver: true,
+            }),
+          ]),
+        ]).start();
+      }, 300);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [productData, isLoading]);
 
   const toggleSection = section => {
     setExpandedSections({
@@ -115,12 +150,18 @@ const DigitalPassportScreen = ({ route, navigation }) => {
     });
   };
 
-  const renderMetadataRow = (label, value) => (
-    <View key={label} style={styles.metadataRow}>
-      <Text style={styles.metadataLabel}>{label}</Text>
-      <Text style={styles.metadataValue}>{value}</Text>
-    </View>
-  );
+  const renderMetadataRow = (label, value) => {
+    if (!value || value === '' || value === 'null' || value === 'undefined') {
+      return null;
+    }
+
+    return (
+      <View key={label} style={styles.metadataRow}>
+        <Text style={styles.metadataLabel}>{label}</Text>
+        <Text style={styles.metadataValue}>{String(value)}</Text>
+      </View>
+    );
+  };
 
   const renderInfoCard = (
     icon,
@@ -148,24 +189,94 @@ const DigitalPassportScreen = ({ route, navigation }) => {
         <Text style={styles.infoValue} numberOfLines={1}>
           {value}
         </Text>
-        <View style={styles.trendContainer}>
-          <Icon
-            name={trend === 'up' ? 'arrow-up' : 'arrow-down'}
-            size={12}
-            color={trend === 'up' ? colors.success : colors.error}
-          />
-          <Text
-            style={[
-              styles.trendText,
-              { color: trend === 'up' ? colors.success : colors.error },
-            ]}
-          >
-            {trendText}
-          </Text>
-        </View>
+        {trend && trendText && (
+          <View style={styles.trendContainer}>
+            <Icon
+              name={trend === 'up' ? 'arrow-up' : 'arrow-down'}
+              size={12}
+              color={trend === 'up' ? colors.success : colors.error}
+            />
+            <Text
+              style={[
+                styles.trendText,
+                { color: trend === 'up' ? colors.success : colors.error },
+              ]}
+            >
+              {trendText}
+            </Text>
+          </View>
+        )}
       </View>
     </Animated.View>
   );
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="arrow-left" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>DIGITAL PRODUCT PASSPORT</Text>
+          <TouchableOpacity style={styles.headerButton}>
+            <Icon name="account-circle-outline" size={24} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading product data...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Error state
+  if (error || !productData) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="arrow-left" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>DIGITAL PRODUCT PASSPORT</Text>
+          <TouchableOpacity style={styles.headerButton}>
+            <Icon name="account-circle-outline" size={24} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.errorContainer}>
+          <Icon name="alert-circle" size={80} color={colors.error} />
+          <Text style={styles.errorTitle}>Unable to Load Product</Text>
+          <Text style={styles.errorText}>{error || 'Product data not available'}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.retryButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const { productSummary, categories } = productData;
+  const identification = categories?.identification || {};
+  const productInfo = categories?.productInformation || {};
+  const sustainability = categories?.sustainability || {};
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -199,11 +310,21 @@ const DigitalPassportScreen = ({ route, navigation }) => {
             },
           ]}
         >
-          <Image source={details.image} style={styles.productImage} />
+          {productSummary?.image ? (
+            <Image
+              source={{ uri: productSummary.image }}
+              style={styles.productImage}
+              resizeMode="contain"
+            />
+          ) : (
+            <View style={styles.placeholderImage}>
+              <Icon name="image-off" size={60} color={colors.gray400} />
+            </View>
+          )}
         </Animated.View>
 
         {/* Product ID */}
-        <Text style={styles.productId}>ID : {product.barcode}</Text>
+        <Text style={styles.productId}>ID : {productData.productId}</Text>
 
         {/* Info Cards Grid */}
         <View style={styles.infoCardsGrid}>
@@ -211,18 +332,18 @@ const DigitalPassportScreen = ({ route, navigation }) => {
             {renderInfoCard(
               'package-variant',
               'Product Name',
-              details.productName,
-              details.trends.productName.direction,
-              details.trends.productName.text,
+              productSummary?.productName || 'N/A',
+              'up',
+              '2.5% Up from past week',
               colors.success,
               card1Slide,
             )}
             {renderInfoCard(
               'factory',
               'Manufacturer',
-              details.manufacturer,
-              details.trends.manufacturer.direction,
-              details.trends.manufacturer.text,
+              productSummary?.manufacturer || 'N/A',
+              'up',
+              '1.8% Up from past week',
               colors.warning,
               card2Slide,
             )}
@@ -231,18 +352,18 @@ const DigitalPassportScreen = ({ route, navigation }) => {
             {renderInfoCard(
               'identifier',
               'Product ID',
-              details.productId,
-              details.trends.productId.direction,
-              details.trends.productId.text,
+              productSummary?.modelNumber || 'N/A',
+              'down',
+              '4.5% Down from yesterday',
               colors.error,
               card3Slide,
             )}
             {renderInfoCard(
               'chart-line',
               'Warranty',
-              details.warranty,
-              details.trends.warranty.direction,
-              details.trends.warranty.text,
+              productSummary?.warranty || 'N/A',
+              'up',
+              '1.8% Up from yesterday',
               '#f97316',
               card4Slide,
             )}
@@ -254,62 +375,79 @@ const DigitalPassportScreen = ({ route, navigation }) => {
         {/* Identification & Metadata */}
         <TouchableOpacity
           style={styles.sectionHeader}
-          onPress={() => toggleSection('metadata')}
+          onPress={() => toggleSection('identification')}
         >
           <Text style={styles.sectionTitle}>Identification & Metadata</Text>
           <Icon
-            name={expandedSections.metadata ? 'chevron-up' : 'chevron-down'}
+            name={expandedSections.identification ? 'chevron-up' : 'chevron-down'}
             size={24}
             color={colors.primary}
           />
         </TouchableOpacity>
-        {expandedSections.metadata && (
+        {expandedSections.identification && (
           <View style={styles.sectionContent}>
-            {Object.entries(details.metadata).map(([key, value]) =>
-              renderMetadataRow(key, value),
-            )}
+            {renderMetadataRow('Product Level', identification.productLevel)}
+            {renderMetadataRow('Serial Number', identification.serialNumber)}
+            {renderMetadataRow('Production Date', identification.productionDate)}
+            {renderMetadataRow('Product Category', identification.productCategory)}
+            {renderMetadataRow('Manufacturer Name', identification.manufacturerName)}
+            {renderMetadataRow('Manufacturer ID', identification.manufacturerIdentifier)}
+            {renderMetadataRow('Manufacturing Facility', identification.manufacturingFacilityID)}
+            {renderMetadataRow('Unique Product ID', identification.uniqueProductIdentifier)}
           </View>
         )}
 
-        {/* Material Composition */}
+        {/* Product Information */}
         <TouchableOpacity
           style={styles.sectionHeader}
-          onPress={() => toggleSection('composition')}
+          onPress={() => toggleSection('productInfo')}
         >
           <Text style={styles.sectionTitle}>Material Composition</Text>
           <Icon
-            name={expandedSections.composition ? 'chevron-up' : 'chevron-down'}
+            name={expandedSections.productInfo ? 'chevron-up' : 'chevron-down'}
             size={24}
             color={colors.primary}
           />
         </TouchableOpacity>
-        {expandedSections.composition && (
+        {expandedSections.productInfo && (
           <View style={styles.sectionContent}>
-            {Object.entries(details.composition).map(([key, value]) =>
-              renderMetadataRow(key, value),
-            )}
+            {renderMetadataRow('Brand', productInfo.brand)}
+            {renderMetadataRow('Model Number', productInfo.modelNumber)}
+            {renderMetadataRow('Description', productInfo.productDescription)}
+            {renderMetadataRow('Width', productInfo.physicalDimension?.width)}
+            {renderMetadataRow('Height', productInfo.physicalDimension?.height)}
+            {renderMetadataRow('Length', productInfo.physicalDimension?.length)}
+            {renderMetadataRow('Weight (g)', productInfo.physicalDimension?.weight)}
+            {renderMetadataRow('Technical Specs', productInfo.technicalSpecifications)}
+            {renderMetadataRow('Energy Efficiency', productInfo.energyEfficiencyClass)}
+            {renderMetadataRow('Intended Use', productInfo.intendedUse)}
           </View>
         )}
 
-        {/* Environmental Data */}
+        {/* Sustainability Data */}
         <TouchableOpacity
           style={styles.sectionHeader}
-          onPress={() => toggleSection('environmental')}
+          onPress={() => toggleSection('sustainability')}
         >
           <Text style={styles.sectionTitle}>Environmental Data</Text>
           <Icon
             name={
-              expandedSections.environmental ? 'chevron-up' : 'chevron-down'
+              expandedSections.sustainability ? 'chevron-up' : 'chevron-down'
             }
             size={24}
             color={colors.primary}
           />
         </TouchableOpacity>
-        {expandedSections.environmental && (
+        {expandedSections.sustainability && (
           <View style={styles.sectionContent}>
-            {Object.entries(details.environmental).map(([key, value]) =>
-              renderMetadataRow(key, value),
-            )}
+            {renderMetadataRow('Material Composition', sustainability.materialComposition)}
+            {renderMetadataRow('Recycled Content %', sustainability.recycledContentPercent)}
+            {renderMetadataRow('Renewable Content %', sustainability.renewableContentPercent)}
+            {renderMetadataRow('Substances of Concern', sustainability.substancesOfConcern)}
+            {renderMetadataRow('Critical Raw Materials', sustainability.criticalRawMaterials)}
+            {renderMetadataRow('Origin of Materials', sustainability.originOfMaterials)}
+            {renderMetadataRow('Water Footprint', sustainability.waterFootprint)}
+            {renderMetadataRow('Biodiversity Impact', sustainability.biodiversityImpact?.assessment)}
           </View>
         )}
 
@@ -317,28 +455,36 @@ const DigitalPassportScreen = ({ route, navigation }) => {
         <View style={styles.additionalInfo}>
           <View style={styles.additionalInfoItem}>
             <Text style={styles.additionalInfoLabel}>DPP ID</Text>
-            <Text style={styles.additionalInfoValue}>{details.gtin}</Text>
+            <Text style={styles.additionalInfoValue}>
+              {identification.uniqueProductIdentifier || productData.productId}
+            </Text>
           </View>
           <View style={styles.additionalInfoItem}>
             <Text style={styles.additionalInfoLabel}>Product ID</Text>
-            <Text style={styles.additionalInfoValue}>{details.lotNumber}</Text>
+            <Text style={styles.additionalInfoValue}>
+              {productInfo.modelNumber || productSummary?.modelNumber || 'N/A'}
+            </Text>
           </View>
           <View style={styles.additionalInfoItem}>
             <Text style={styles.additionalInfoLabel}>Batch ID</Text>
             <Text style={styles.additionalInfoValue}>
-              {details.serialDisplay}
+              {identification.serialNumber || 'N/A'}
             </Text>
           </View>
           <View style={styles.additionalInfoItem}>
             <Text style={styles.additionalInfoLabel}>Manufacturer</Text>
             <Text style={styles.additionalInfoValue}>
-              {details.productNameDisplay}
+              {productSummary?.manufacturer || identification.manufacturerName || 'N/A'}
             </Text>
           </View>
-          <View style={styles.additionalInfoItem}>
-            <Text style={styles.additionalInfoLabel}>Expiry Date</Text>
-            <Text style={styles.additionalInfoValue}>{details.expiryDate}</Text>
-          </View>
+          {identification.productionDate && (
+            <View style={styles.additionalInfoItem}>
+              <Text style={styles.additionalInfoLabel}>Expiry Date</Text>
+              <Text style={styles.additionalInfoValue}>
+                {identification.productionDate}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Action Buttons */}
@@ -370,7 +516,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
@@ -390,6 +535,46 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: colors.gray600,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: colors.text,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    color: colors.gray600,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   imageContainer: {
     backgroundColor: colors.white,
     padding: 24,
@@ -399,7 +584,14 @@ const styles = StyleSheet.create({
   productImage: {
     width: 200,
     height: 200,
-    resizeMode: 'contain',
+  },
+  placeholderImage: {
+    width: 200,
+    height: 200,
+    backgroundColor: colors.gray100,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   productId: {
     fontSize: 16,
@@ -421,12 +613,10 @@ const styles = StyleSheet.create({
   infoCard: {
     backgroundColor: colors.white,
     flex: 1,
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
     borderColor: colors.gray200,
-    shadowColor: '#000',
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,

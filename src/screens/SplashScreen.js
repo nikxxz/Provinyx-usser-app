@@ -6,7 +6,7 @@ import { colors } from '../constants/colors';
 const SplashScreen = ({ navigation }) => {
   useEffect(() => {
     const timeout = setTimeout(() => {
-      navigation.replace('Onboarding');
+      navigation.replace('IntroSlides');
     }, 1000);
 
     return () => clearTimeout(timeout);

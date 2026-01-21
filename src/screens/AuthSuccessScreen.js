@@ -71,6 +71,7 @@ const AuthSuccessScreen = ({ route, navigation }) => {
       console.log('❓ credentials:', credentials);
       console.log('❓ userData:', userData);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scaleAnim, opacityAnim, authType, userData, credentials]);
 
   const handleSignUp = async () => {

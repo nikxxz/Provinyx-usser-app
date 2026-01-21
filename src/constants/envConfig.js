@@ -1,7 +1,3 @@
-/**
- * Environment Configuration
- * This file contains environment-specific settings
- */
 
 // Environment types
 export const ENV_TYPES = {
@@ -10,14 +6,13 @@ export const ENV_TYPES = {
   PRODUCTION: 'production',
 };
 
-// Current environment - should be changed based on build configuration
 export const CURRENT_ENV = ENV_TYPES.DEVELOPMENT;
 
 // Environment-specific API base URLs
 export const API_BASE_URLS = {
-  [ENV_TYPES.DEVELOPMENT]: 'http://v2202508291216369038.goodsrv.de:4001',
-  [ENV_TYPES.STAGING]: 'http://v2202508291216369038.goodsrv.de:4001',
-  [ENV_TYPES.PRODUCTION]: 'http://v2202508291216369038.goodsrv.de:4001',
+  [ENV_TYPES.DEVELOPMENT]: 'https://dpp-api.acespireconsulting.com',
+  [ENV_TYPES.STAGING]: 'https://dpp-api.acespireconsulting.com',
+  [ENV_TYPES.PRODUCTION]: 'https://dpp-api.acespireconsulting.com',
 };
 
 // Get current base URL

@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   Image,
   TouchableOpacity,
   StatusBar,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,9 +18,11 @@ import { AuthContext } from '../context/AuthContext';
 import { useStore } from '../store';
 
 const RecentsScreen = ({ navigation }) => {
-  const { validateUser, logout } = useContext(AuthContext);
-  const { state } = useStore();
-  const recentScans = state.scanHistory || [];
+  const { validateUser, logout, currentUser } = useContext(AuthContext);
+  const { state, fetchUserHistory, getProductDetails } = useStore();
+  const [recentProducts, setRecentProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Check auth status when screen comes into focus
   useFocusEffect(
@@ -38,13 +42,130 @@ const RecentsScreen = ({ navigation }) => {
     }, [validateUser, logout, navigation]),
   );
 
+  // Fetch history from API when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadHistory = async () => {
+        // Prefer ID, but validate it first
+        if (currentUser?.id) {
+          const userId =
+            typeof currentUser.id === 'string'
+              ? parseInt(currentUser.id, 10)
+              : currentUser.id;
+
+          if (Number.isInteger(userId) && userId > 0) {
+            await fetchUserHistory(userId);
+            return;
+          }
+        }
+
+        // Fallback to email
+        if (currentUser?.email) {
+          await fetchUserHistory(currentUser.email);
+        }
+      };
+
+      loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentUser?.id, currentUser?.email]),
+  );
+
+  // Load product details for all history items
+  useEffect(() => {
+    const loadRecentProducts = async () => {
+      const historyIds = state.scanHistory || [];
+      if (historyIds.length === 0) {
+        setRecentProducts([]);
+        setLoadingProducts(false);
+        return;
+      }
+
+      setLoadingProducts(true);
+
+      try {
+        // Load all products
+        const productsData = await Promise.all(
+          historyIds.map(async productId => {
+            const productData = await getProductDetails(productId);
+            if (productData) {
+              return {
+                productId,
+                productData,
+                details: formatProductDetails(productData),
+              };
+            }
+            return null;
+          }),
+        );
+
+        // Filter out null values
+        setRecentProducts(productsData.filter(p => p !== null));
+      } catch (error) {
+        console.error('❌ Error loading recent products:', error);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    loadRecentProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.scanHistory]);
+
+  // Pull to refresh handler
+  const onRefresh = async () => {
+    if (!currentUser?.id && !currentUser?.email) return;
+
+    setRefreshing(true);
+    try {
+      // Force refresh from API - prefer ID over email, validate ID
+      let identifier = currentUser.email;
+
+      if (currentUser.id) {
+        const userId =
+          typeof currentUser.id === 'string'
+            ? parseInt(currentUser.id, 10)
+            : currentUser.id;
+
+        if (Number.isInteger(userId) && userId > 0) {
+          identifier = userId;
+        }
+      }
+
+      await fetchUserHistory(identifier, true);
+    } catch (error) {
+      console.error('❌ Error refreshing history:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Helper function to format product details
+  const formatProductDetails = productData => {
+    const { productSummary, categories } = productData || {};
+
+    return {
+      image: productSummary?.image ? { uri: productSummary.image } : null,
+      productName: productSummary?.productName || 'Unknown Product',
+      approved: categories?.environmentalFootprint?.pefCompliant ? 85 : 75,
+      renewability: categories?.sustainability?.recycledContentPercent || 70,
+      ownership: 90,
+      warrantyScore: 80,
+    };
+  };
+
   const renderProductCard = ({ item }) => {
-    const { details } = item;
+    const { details, productData, productId } = item;
 
     return (
       <View style={styles.productCard}>
         <View style={styles.productImageContainer}>
-          <Image source={details.image} style={styles.productImage} />
+          {details.image ? (
+            <Image source={details.image} style={styles.productImage} />
+          ) : (
+            <View style={styles.placeholderImage}>
+              <Icon name="image-off" size={60} color="#ccc" />
+            </View>
+          )}
           <View style={styles.verifiedBadge}>
             <Image
               source={require('../../assets/Check.png')}
@@ -112,7 +233,10 @@ const RecentsScreen = ({ navigation }) => {
         <TouchableOpacity
           style={styles.viewPassportButton}
           onPress={() =>
-            navigation.navigate('DigitalPassport', { product: item })
+            navigation.navigate('DigitalPassport', {
+              productData: productData,
+              barcode: productId,
+            })
           }
         >
           <Text style={styles.viewPassportText}>View Passport</Text>
@@ -121,6 +245,30 @@ const RecentsScreen = ({ navigation }) => {
       </View>
     );
   };
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyStateContainer}>
+      <Icon name="qrcode-scan" size={80} color={colors.gray300} />
+      <Text style={styles.emptyStateTitle}>No recent scans yet</Text>
+      <Text style={styles.emptyStateText}>
+        Scan a product QR code to see it appear here.
+      </Text>
+      <TouchableOpacity
+        style={styles.scanButton}
+        onPress={() => navigation.navigate('Scanner')}
+      >
+        <Icon name="qrcode-scan" size={20} color="#fff" />
+        <Text style={styles.scanButtonText}>Scan Now</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderLoadingState = () => (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={styles.loadingText}>Loading your scans...</Text>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -139,20 +287,32 @@ const RecentsScreen = ({ navigation }) => {
       </View>
 
       {/* Products List */}
-      {recentScans.length === 0 ? (
-        <View style={styles.emptyStateContainer}>
-          <Text style={styles.emptyStateTitle}>No recent scans yet</Text>
-          <Text style={styles.emptyStateText}>
-            Scan a product QR code to see it appear here.
-          </Text>
-        </View>
+      {state.isLoadingHistory && recentProducts.length === 0 ? (
+        renderLoadingState()
+      ) : recentProducts.length === 0 ? (
+        renderEmptyState()
       ) : (
         <FlatList
-          data={recentScans}
+          data={recentProducts}
           renderItem={renderProductCard}
-          keyExtractor={(item, index) => index.toString()}
+          keyExtractor={(item, index) => `${item.productId}-${index}`}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
+          ListFooterComponent={
+            loadingProducts && recentProducts.length > 0 ? (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            ) : null
+          }
         />
       )}
     </SafeAreaView>
@@ -197,12 +357,50 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: colors.text,
+    marginTop: 16,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 14,
     color: colors.gray600,
     textAlign: 'center',
+    marginBottom: 24,
+  },
+  scanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    gap: 8,
+  },
+  scanButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: colors.gray600,
+    marginTop: 12,
+  },
+  footerLoader: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  placeholderImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   productCard: {
     backgroundColor: colors.white,
