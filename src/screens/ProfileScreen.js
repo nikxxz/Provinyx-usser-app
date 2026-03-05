@@ -16,10 +16,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../constants/colors';
 import { AuthContext } from '../context/AuthContext';
+import { useStore } from '../store';
 import { updateUserProfile, changePassword } from '../services/userService';
 
 const ProfileScreen = ({ navigation }) => {
   const { currentUser, logout, login } = useContext(AuthContext);
+  const { clearStore } = useStore();
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -129,11 +131,9 @@ const ProfileScreen = ({ navigation }) => {
         text: 'Logout',
         style: 'destructive',
         onPress: async () => {
+          await clearStore();
           await logout();
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Onboarding' }],
-          });
+          // NavigationContainer will automatically switch to auth stack
         },
       },
     ]);

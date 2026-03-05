@@ -8,7 +8,6 @@ try {
   const native =
     NativeModules.RNCAsyncStorage || NativeModules.RNC_AsyncStorage;
   if (native) {
-
     AsyncStorage = require('@react-native-async-storage/async-storage').default;
   }
 } catch (e) {
@@ -19,8 +18,8 @@ const StoreContext = createContext();
 
 export const StoreProvider = ({ children }) => {
   const [state, setState] = useState({
-    scanHistory: [], 
-    productCache: {}, 
+    scanHistory: [],
+    productCache: {},
     isLoadingHistory: false,
     historyLastFetched: null,
     historyError: null,
@@ -39,22 +38,19 @@ export const StoreProvider = ({ children }) => {
           const parsed = JSON.parse(stored);
           setState(prev => ({ ...prev, ...parsed }));
         }
-      } catch (e) {
-
-      }
+      } catch (e) {}
     };
 
     loadState();
   }, []);
 
-  
   const fetchUserHistory = async (emailOrId, forceRefresh = false) => {
     if (!emailOrId) {
       console.warn('⚠️ No email/ID provided for fetching history');
       return;
     }
 
-    // Additional validation 
+    // Additional validation
     const isEmail = typeof emailOrId === 'string' && emailOrId.includes('@');
     if (!isEmail) {
       const id =
@@ -69,7 +65,6 @@ export const StoreProvider = ({ children }) => {
       }
     }
 
- 
     const now = Date.now();
     const fiveMinutes = 5 * 60 * 1000;
     if (
@@ -106,7 +101,7 @@ export const StoreProvider = ({ children }) => {
 
         console.log('✅ History updated from API:', historyIds.length, 'items');
       } else if (response.success && response.data?.historyCount === 0) {
-        // User has no history yet 
+        // User has no history yet
         setState(prev => ({
           ...prev,
           scanHistory: [],
@@ -125,31 +120,37 @@ export const StoreProvider = ({ children }) => {
         ...prev,
         isLoadingHistory: false,
         historyError: errorMessage,
-        historyLastFetched: now, 
+        historyLastFetched: now,
       }));
     }
   };
 
-
-  const getProductDetails = async productId => {
-    // Check cache first
-    if (state.productCache[productId]) {
-      console.log('📦 Using cached product data for:', productId);
-      return state.productCache[productId];
+  const getProductDetails = async productIdOrDppId => {
+    // Check cache first (productId could be dppId or GTIN)
+    if (state.productCache[productIdOrDppId]) {
+      console.log('📦 Using cached product data for:', productIdOrDppId);
+      return state.productCache[productIdOrDppId];
     }
 
     // Fetch from API
     try {
-      console.log('🔍 Fetching product details for:', productId);
-      const response = await getProductByGtin(productId);
+      console.log('🔍 Fetching product details for:', productIdOrDppId);
+      const response = await getProductByGtin(productIdOrDppId);
 
       if (response.success && response.data) {
-        // Cache the product data
+        // Extract dppId from new response structure
+        const dppId = response.data.dppId || productIdOrDppId;
+
+        // Cache the product data using dppId as key
         setState(prev => ({
           ...prev,
           productCache: {
             ...prev.productCache,
-            [productId]: response.data,
+            [dppId]: response.data,
+            // Also cache by the search key if different
+            ...(dppId !== productIdOrDppId
+              ? { [productIdOrDppId]: response.data }
+              : {}),
           },
         }));
 
@@ -161,48 +162,70 @@ export const StoreProvider = ({ children }) => {
     }
   };
 
+  const cacheProductData = (productIdOrDppId, productData) => {
+    // Extract dppId from new response structure if available
+    const dppId = productData?.dppId || productIdOrDppId;
 
-  const cacheProductData = (productId, productData) => {
     setState(prev => ({
       ...prev,
       productCache: {
         ...prev.productCache,
-        [productId]: productData,
+        [dppId]: productData,
+        // Also cache by the provided key if different
+        ...(dppId !== productIdOrDppId
+          ? { [productIdOrDppId]: productData }
+          : {}),
       },
     }));
   };
 
-
-  const addToLocalHistory = productId => {
+  const addToLocalHistory = dppIdOrProductId => {
     setState(prev => {
       const existingHistory = prev.scanHistory || [];
-      const filtered = existingHistory.filter(id => id !== productId);
+      const filtered = existingHistory.filter(id => id !== dppIdOrProductId);
       return {
         ...prev,
-        scanHistory: [productId, ...filtered],
+        scanHistory: [dppIdOrProductId, ...filtered],
       };
     });
   };
 
-
   const addScanToHistory = product => {
-
-    const productId = product.barcode || product.productId;
-    if (productId) {
-      addToLocalHistory(productId);
+    // Extract dppId from new structure, fallback to legacy fields
+    const dppId =
+      product.dppId ||
+      product.productData?.dppId ||
+      product.barcode ||
+      product.productId;
+    if (dppId) {
+      addToLocalHistory(dppId);
 
       if (product.productData) {
-        cacheProductData(productId, product.productData);
+        cacheProductData(dppId, product.productData);
       }
     }
   };
 
- 
   const clearProductCache = () => {
     setState(prev => ({
       ...prev,
       productCache: {},
     }));
+  };
+
+  const clearStore = async () => {
+    setState({
+      scanHistory: [],
+      productCache: {},
+      isLoadingHistory: false,
+      historyLastFetched: null,
+      historyError: null,
+    });
+    if (AsyncStorage) {
+      try {
+        await AsyncStorage.removeItem('unveilix_store');
+      } catch (e) {}
+    }
   };
 
   // Persist store state when it changes
@@ -231,6 +254,7 @@ export const StoreProvider = ({ children }) => {
     cacheProductData,
     addToLocalHistory,
     clearProductCache,
+    clearStore,
   };
 
   return (

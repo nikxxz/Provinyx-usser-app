@@ -105,6 +105,58 @@ class AuthService {
     }
   }
 
+  async googleSignIn(googleUserData) {
+    try {
+      console.log('Google Sign-In called with:', googleUserData);
+
+      // Validate required fields
+      if (!googleUserData.email || !googleUserData.username) {
+        throw new Error('Email and username are required for Google Sign-In');
+      }
+
+      const response = await apiService.post(API_ENDPOINTS.AUTH.GOOGLE_AUTH, {
+        username: googleUserData.username,
+        emailID: googleUserData.email,
+        phone: googleUserData.phone || '',
+        isgoogleid: true,
+      });
+
+      if (response.success) {
+        this.user = response.data;
+        this.isAuthenticated = true;
+
+        return {
+          success: true,
+          data: response.data,
+          message: response.message,
+          isNewUser: response.statusCode === 201,
+        };
+      } else {
+        throw new Error(response.message || AUTH_ERROR_MESSAGES.SERVER_ERROR);
+      }
+    } catch (error) {
+      console.error('Google Sign-In error:', error);
+
+      // Map specific error codes to user-friendly messages
+      let errorMessage = AUTH_ERROR_MESSAGES.SERVER_ERROR;
+
+      if (error.statusCode === 409) {
+        errorMessage =
+          'This email is registered with a regular account. Please use email/password login.';
+      } else if (error.errorCode === 'TIMEOUT') {
+        errorMessage = AUTH_ERROR_MESSAGES.NETWORK_ERROR;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      return {
+        success: false,
+        message: errorMessage,
+        error: error.errorCode || 'UNKNOWN_ERROR',
+      };
+    }
+  }
+
   async logout() {
     try {
       this.user = null;

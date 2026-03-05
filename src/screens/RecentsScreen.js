@@ -46,7 +46,19 @@ const RecentsScreen = ({ navigation }) => {
   useFocusEffect(
     React.useCallback(() => {
       const loadHistory = async () => {
-        // Prefer ID, but validate it first
+        if (!currentUser) {
+          console.log('⚠️ No current user, skipping history fetch');
+          return;
+        }
+
+        // Prefer email for Google users (more reliable)
+        if (currentUser?.email) {
+          console.log('📧 Fetching history by email:', currentUser.email);
+          await fetchUserHistory(currentUser.email);
+          return;
+        }
+
+        // Fallback to ID if no email
         if (currentUser?.id) {
           const userId =
             typeof currentUser.id === 'string'
@@ -54,20 +66,18 @@ const RecentsScreen = ({ navigation }) => {
               : currentUser.id;
 
           if (Number.isInteger(userId) && userId > 0) {
+            console.log('🆔 Fetching history by ID:', userId);
             await fetchUserHistory(userId);
             return;
           }
         }
 
-        // Fallback to email
-        if (currentUser?.email) {
-          await fetchUserHistory(currentUser.email);
-        }
+        console.warn('⚠️ User has no valid email or ID for history fetch');
       };
 
       loadHistory();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentUser?.id, currentUser?.email]),
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentUser?.email, currentUser?.id]),
   );
 
   // Load product details for all history items
@@ -113,13 +123,21 @@ const RecentsScreen = ({ navigation }) => {
 
   // Pull to refresh handler
   const onRefresh = async () => {
-    if (!currentUser?.id && !currentUser?.email) return;
+    if (!currentUser) {
+      console.warn('⚠️ No current user for refresh');
+      return;
+    }
 
     setRefreshing(true);
     try {
-      // Force refresh from API - prefer ID over email, validate ID
-      let identifier = currentUser.email;
+      // Prefer email for Google users
+      if (currentUser.email) {
+        console.log('🔄 Refreshing history by email:', currentUser.email);
+        await fetchUserHistory(currentUser.email, true);
+        return;
+      }
 
+      // Fallback to ID
       if (currentUser.id) {
         const userId =
           typeof currentUser.id === 'string'
@@ -127,11 +145,13 @@ const RecentsScreen = ({ navigation }) => {
             : currentUser.id;
 
         if (Number.isInteger(userId) && userId > 0) {
-          identifier = userId;
+          console.log('🔄 Refreshing history by ID:', userId);
+          await fetchUserHistory(userId, true);
+          return;
         }
       }
 
-      await fetchUserHistory(identifier, true);
+      console.warn('⚠️ Cannot refresh: no valid email or ID');
     } catch (error) {
       console.error('❌ Error refreshing history:', error);
     } finally {
@@ -141,7 +161,9 @@ const RecentsScreen = ({ navigation }) => {
 
   // Helper function to format product details
   const formatProductDetails = productData => {
-    const { productSummary, categories } = productData || {};
+    // Extract from new nested structure
+    const masterData = productData?.masterData || productData;
+    const { productSummary, categories } = masterData || {};
 
     return {
       image: productSummary?.image ? { uri: productSummary.image } : null,
@@ -155,6 +177,9 @@ const RecentsScreen = ({ navigation }) => {
 
   const renderProductCard = ({ item }) => {
     const { details, productData, productId } = item;
+    // Extract dppId from new structure for navigation
+    const dppId = productData?.dppId || productId;
+    const gtin = productData?.gtin;
 
     return (
       <View style={styles.productCard}>
@@ -235,7 +260,8 @@ const RecentsScreen = ({ navigation }) => {
           onPress={() =>
             navigation.navigate('DigitalPassport', {
               productData: productData,
-              barcode: productId,
+              dppId: dppId,
+              gtin: gtin,
             })
           }
         >

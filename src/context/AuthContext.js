@@ -100,6 +100,9 @@ export const AuthProvider = ({ children }) => {
         AUTH_STORAGE_KEYS.USER_DATA,
         AUTH_STORAGE_KEYS.ACCESS_TOKEN,
         AUTH_STORAGE_KEYS.REFRESH_TOKEN,
+        AUTH_STORAGE_KEYS.LAST_LOGIN,
+        AUTH_STORAGE_KEYS.LOGIN_TYPE,
+        'unveilix_store',
       ]);
     } catch (error) {
       console.error('Error clearing user data:', error);

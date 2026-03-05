@@ -99,19 +99,22 @@ const ScannerScreen = ({ navigation }) => {
       if (response.success && response.data) {
         console.log('✅ Product found, navigating to Digital Passport');
 
-        // Cache the product data locally
-        cacheProductData(barcode, response.data);
+        // Extract DPP ID and GTIN from new response structure
+        const { dppId, gtin } = response.data;
 
-        // Check if product already exists in history
-        const existsInHistory = state.scanHistory?.includes(barcode);
+        // Cache the product data locally using dppId as key
+        cacheProductData(dppId, response.data);
+
+        // Check if product already exists in history (using dppId)
+        const existsInHistory = state.scanHistory?.includes(dppId);
 
         if (!existsInHistory) {
-          // Add to local history (optimistic update)
-          addToLocalHistory(barcode);
+          // Add to local history (optimistic update) using dppId
+          addToLocalHistory(dppId);
 
           // Save to API in background (non-blocking)
           if (currentUser?.email) {
-            addScanToHistoryBackground(currentUser.email, barcode)
+            addScanToHistoryBackground(currentUser.email, dppId)
               .then(() => console.log('📝 Scan saved to API history'))
               .catch(err => console.warn('⚠️ Failed to save to API:', err));
           } else {
@@ -130,7 +133,7 @@ const ScannerScreen = ({ navigation }) => {
             { name: 'Home' },
             {
               name: 'DigitalPassport',
-              params: { productData: response.data, barcode },
+              params: { productData: response.data, dppId, gtin },
             },
           ],
         });
@@ -199,7 +202,7 @@ const ScannerScreen = ({ navigation }) => {
           <Icon name="camera-off" size={80} color="#666" />
           <Text style={styles.permissionTitle}>Camera Access Required</Text>
           <Text style={styles.permissionText}>
-            Unveilix needs camera permission to scan QR codes for product
+            Provinyx needs camera permission to scan QR codes for product
             verification.
           </Text>
           <TouchableOpacity

@@ -12,6 +12,7 @@ export const API_ENDPOINTS = {
     LOGIN_USERNAME: '/api/login/username',
     LOGIN_EMAIL: '/api/login/email',
     REGISTER: '/api/users',
+    GOOGLE_AUTH: '/api/google-users',
     REFRESH_TOKEN: '/api/auth/refresh',
     LOGOUT: '/api/auth/logout',
     FORGOT_PASSWORD: '/api/auth/forgot-password',
@@ -28,7 +29,7 @@ export const API_ENDPOINTS = {
 
   // Product/Master Data endpoints
   PRODUCTS: {
-    BY_ID: '/api/master-data', // Use with GTIN: /api/master-data/GTIN-1234567890123
+    BY_ID: '/api/dpp', // Use with GTIN: /api/master-data/GTIN-1234567890123
     SEARCH: '/api/master-data/search',
     CATEGORIES: '/api/master-data/categories',
     BATCH_LOOKUP: '/api/master-data/batch',

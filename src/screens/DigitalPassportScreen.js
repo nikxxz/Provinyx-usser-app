@@ -18,7 +18,12 @@ import { AuthContext } from '../context/AuthContext';
 import { getProductByGtin } from '../services/productService';
 
 const DigitalPassportScreen = ({ route, navigation }) => {
-  const { productData: initialProductData, barcode } = route.params;
+  const {
+    productData: initialProductData,
+    dppId,
+    gtin,
+    barcode,
+  } = route.params;
   const { validateUser, logout } = useContext(AuthContext);
 
   const [productData, setProductData] = useState(initialProductData || null);
@@ -61,11 +66,11 @@ const DigitalPassportScreen = ({ route, navigation }) => {
   // Fetch product data if not provided
   useEffect(() => {
     const fetchProductData = async () => {
-      if (!initialProductData && barcode) {
+      if (!initialProductData && (gtin || barcode)) {
         try {
           console.log('📡 Fetching product data from DigitalPassport screen');
           setIsLoading(true);
-          const response = await getProductByGtin(barcode);
+          const response = await getProductByGtin(gtin || barcode);
 
           if (response.success && response.data) {
             setProductData(response.data);
@@ -83,7 +88,7 @@ const DigitalPassportScreen = ({ route, navigation }) => {
     };
 
     fetchProductData();
-  }, [initialProductData, barcode]);
+  }, [initialProductData, gtin, barcode]);
 
   // Start animations once data is loaded
   useEffect(() => {
@@ -164,7 +169,7 @@ const DigitalPassportScreen = ({ route, navigation }) => {
   };
 
   const renderInfoCard = (
-    icon,
+    iconImage,
     label,
     value,
     trend,
@@ -181,19 +186,16 @@ const DigitalPassportScreen = ({ route, navigation }) => {
         },
       ]}
     >
-      <View style={[styles.infoIconContainer, { backgroundColor: bgColor }]}>
-        <Icon name={icon} size={20} color="#fff" />
-      </View>
       <View style={styles.infoContent}>
         <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue} numberOfLines={1}>
+        <Text style={styles.infoValue} numberOfLines={2}>
           {value}
         </Text>
         {trend && trendText && (
           <View style={styles.trendContainer}>
             <Icon
               name={trend === 'up' ? 'arrow-up' : 'arrow-down'}
-              size={12}
+              size={14}
               color={trend === 'up' ? colors.success : colors.error}
             />
             <Text
@@ -206,6 +208,13 @@ const DigitalPassportScreen = ({ route, navigation }) => {
             </Text>
           </View>
         )}
+      </View>
+      <View style={[styles.infoIconContainer, { backgroundColor: bgColor }]}>
+        <Image
+          source={iconImage}
+          style={styles.infoIcon}
+          resizeMode="contain"
+        />
       </View>
     </Animated.View>
   );
@@ -261,7 +270,9 @@ const DigitalPassportScreen = ({ route, navigation }) => {
         <View style={styles.errorContainer}>
           <Icon name="alert-circle" size={80} color={colors.error} />
           <Text style={styles.errorTitle}>Unable to Load Product</Text>
-          <Text style={styles.errorText}>{error || 'Product data not available'}</Text>
+          <Text style={styles.errorText}>
+            {error || 'Product data not available'}
+          </Text>
           <TouchableOpacity
             style={styles.retryButton}
             onPress={() => navigation.goBack()}
@@ -273,7 +284,9 @@ const DigitalPassportScreen = ({ route, navigation }) => {
     );
   }
 
-  const { productSummary, categories } = productData;
+  // Extract from new nested masterData structure
+  const masterData = productData?.masterData || productData;
+  const { productSummary, categories } = masterData || {};
   const identification = categories?.identification || {};
   const productInfo = categories?.productInformation || {};
   const sustainability = categories?.sustainability || {};
@@ -323,48 +336,53 @@ const DigitalPassportScreen = ({ route, navigation }) => {
           )}
         </Animated.View>
 
-        {/* Product ID */}
-        <Text style={styles.productId}>ID : {productData.productId}</Text>
+        {/* DPP ID - Large at top */}
+        <View style={styles.dppIdContainer}>
+          <Text style={styles.dppIdLabel}>ID : </Text>
+          <Text style={styles.dppIdValue}>
+            {productData.dppId || dppId || 'N/A'}
+          </Text>
+        </View>
 
         {/* Info Cards Grid */}
         <View style={styles.infoCardsGrid}>
           <View style={styles.infoCardsRow}>
             {renderInfoCard(
-              'package-variant',
+              require('../../assets/ProductName.png'),
               'Product Name',
               productSummary?.productName || 'N/A',
               'up',
               '2.5% Up from past week',
-              colors.success,
+              colors.white,
               card1Slide,
             )}
             {renderInfoCard(
-              'factory',
+              require('../../assets/Manufacturer.png'),
               'Manufacturer',
               productSummary?.manufacturer || 'N/A',
               'up',
               '1.8% Up from past week',
-              colors.warning,
+              colors.white,
               card2Slide,
             )}
           </View>
           <View style={styles.infoCardsRow}>
             {renderInfoCard(
-              'identifier',
+              require('../../assets/ProductID.png'),
               'Product ID',
               productSummary?.modelNumber || 'N/A',
               'down',
               '4.5% Down from yesterday',
-              colors.error,
+              colors.white,
               card3Slide,
             )}
             {renderInfoCard(
-              'chart-line',
+              require('../../assets/Warranty2.png'),
               'Warranty',
               productSummary?.warranty || 'N/A',
               'up',
               '1.8% Up from yesterday',
-              '#f97316',
+              colors.white,
               card4Slide,
             )}
           </View>
@@ -379,7 +397,9 @@ const DigitalPassportScreen = ({ route, navigation }) => {
         >
           <Text style={styles.sectionTitle}>Identification & Metadata</Text>
           <Icon
-            name={expandedSections.identification ? 'chevron-up' : 'chevron-down'}
+            name={
+              expandedSections.identification ? 'chevron-up' : 'chevron-down'
+            }
             size={24}
             color={colors.primary}
           />
@@ -388,12 +408,30 @@ const DigitalPassportScreen = ({ route, navigation }) => {
           <View style={styles.sectionContent}>
             {renderMetadataRow('Product Level', identification.productLevel)}
             {renderMetadataRow('Serial Number', identification.serialNumber)}
-            {renderMetadataRow('Production Date', identification.productionDate)}
-            {renderMetadataRow('Product Category', identification.productCategory)}
-            {renderMetadataRow('Manufacturer Name', identification.manufacturerName)}
-            {renderMetadataRow('Manufacturer ID', identification.manufacturerIdentifier)}
-            {renderMetadataRow('Manufacturing Facility', identification.manufacturingFacilityID)}
-            {renderMetadataRow('Unique Product ID', identification.uniqueProductIdentifier)}
+            {renderMetadataRow(
+              'Production Date',
+              identification.productionDate,
+            )}
+            {renderMetadataRow(
+              'Product Category',
+              identification.productCategory,
+            )}
+            {renderMetadataRow(
+              'Manufacturer Name',
+              identification.manufacturerName,
+            )}
+            {renderMetadataRow(
+              'Manufacturer ID',
+              identification.manufacturerIdentifier,
+            )}
+            {renderMetadataRow(
+              'Manufacturing Facility',
+              identification.manufacturingFacilityID,
+            )}
+            {renderMetadataRow(
+              'Unique Product ID',
+              identification.uniqueProductIdentifier,
+            )}
           </View>
         )}
 
@@ -417,9 +455,18 @@ const DigitalPassportScreen = ({ route, navigation }) => {
             {renderMetadataRow('Width', productInfo.physicalDimension?.width)}
             {renderMetadataRow('Height', productInfo.physicalDimension?.height)}
             {renderMetadataRow('Length', productInfo.physicalDimension?.length)}
-            {renderMetadataRow('Weight (g)', productInfo.physicalDimension?.weight)}
-            {renderMetadataRow('Technical Specs', productInfo.technicalSpecifications)}
-            {renderMetadataRow('Energy Efficiency', productInfo.energyEfficiencyClass)}
+            {renderMetadataRow(
+              'Weight (g)',
+              productInfo.physicalDimension?.weight,
+            )}
+            {renderMetadataRow(
+              'Technical Specs',
+              productInfo.technicalSpecifications,
+            )}
+            {renderMetadataRow(
+              'Energy Efficiency',
+              productInfo.energyEfficiencyClass,
+            )}
             {renderMetadataRow('Intended Use', productInfo.intendedUse)}
           </View>
         )}
@@ -440,14 +487,38 @@ const DigitalPassportScreen = ({ route, navigation }) => {
         </TouchableOpacity>
         {expandedSections.sustainability && (
           <View style={styles.sectionContent}>
-            {renderMetadataRow('Material Composition', sustainability.materialComposition)}
-            {renderMetadataRow('Recycled Content %', sustainability.recycledContentPercent)}
-            {renderMetadataRow('Renewable Content %', sustainability.renewableContentPercent)}
-            {renderMetadataRow('Substances of Concern', sustainability.substancesOfConcern)}
-            {renderMetadataRow('Critical Raw Materials', sustainability.criticalRawMaterials)}
-            {renderMetadataRow('Origin of Materials', sustainability.originOfMaterials)}
-            {renderMetadataRow('Water Footprint', sustainability.waterFootprint)}
-            {renderMetadataRow('Biodiversity Impact', sustainability.biodiversityImpact?.assessment)}
+            {renderMetadataRow(
+              'Material Composition',
+              sustainability.materialComposition,
+            )}
+            {renderMetadataRow(
+              'Recycled Content %',
+              sustainability.recycledContentPercent,
+            )}
+            {renderMetadataRow(
+              'Renewable Content %',
+              sustainability.renewableContentPercent,
+            )}
+            {renderMetadataRow(
+              'Substances of Concern',
+              sustainability.substancesOfConcern,
+            )}
+            {renderMetadataRow(
+              'Critical Raw Materials',
+              sustainability.criticalRawMaterials,
+            )}
+            {renderMetadataRow(
+              'Origin of Materials',
+              sustainability.originOfMaterials,
+            )}
+            {renderMetadataRow(
+              'Water Footprint',
+              sustainability.waterFootprint,
+            )}
+            {renderMetadataRow(
+              'Biodiversity Impact',
+              sustainability.biodiversityImpact?.assessment,
+            )}
           </View>
         )}
 
@@ -456,11 +527,20 @@ const DigitalPassportScreen = ({ route, navigation }) => {
           <View style={styles.additionalInfoItem}>
             <Text style={styles.additionalInfoLabel}>DPP ID</Text>
             <Text style={styles.additionalInfoValue}>
-              {identification.uniqueProductIdentifier || productData.productId}
+              {productData.dppId ||
+                dppId ||
+                identification.uniqueProductIdentifier ||
+                'N/A'}
             </Text>
           </View>
           <View style={styles.additionalInfoItem}>
             <Text style={styles.additionalInfoLabel}>Product ID</Text>
+            <Text style={styles.additionalInfoValue}>
+              {productData.gtin || gtin || masterData?.productId || 'N/A'}
+            </Text>
+          </View>
+          <View style={styles.additionalInfoItem}>
+            <Text style={styles.additionalInfoLabel}>Model Number</Text>
             <Text style={styles.additionalInfoValue}>
               {productInfo.modelNumber || productSummary?.modelNumber || 'N/A'}
             </Text>
@@ -474,12 +554,14 @@ const DigitalPassportScreen = ({ route, navigation }) => {
           <View style={styles.additionalInfoItem}>
             <Text style={styles.additionalInfoLabel}>Manufacturer</Text>
             <Text style={styles.additionalInfoValue}>
-              {productSummary?.manufacturer || identification.manufacturerName || 'N/A'}
+              {productSummary?.manufacturer ||
+                identification.manufacturerName ||
+                'N/A'}
             </Text>
           </View>
           {identification.productionDate && (
             <View style={styles.additionalInfoItem}>
-              <Text style={styles.additionalInfoLabel}>Expiry Date</Text>
+              <Text style={styles.additionalInfoLabel}>Production Date</Text>
               <Text style={styles.additionalInfoValue}>
                 {identification.productionDate}
               </Text>
@@ -593,6 +675,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  dppIdContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingHorizontal: 16,
+  },
+  dppIdLabel: {
+    fontSize: 20,
+    fontWeight: '400',
+    color: colors.text,
+  },
+  dppIdValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+  },
   productId: {
     fontSize: 16,
     fontWeight: '600',
@@ -602,46 +701,56 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   infoCardsGrid: {
-    paddingHorizontal: 16,
-    marginBottom: 20,
+    paddingHorizontal: 8,
+    marginBottom: 8,
   },
   infoCardsRow: {
     flexDirection: 'row',
-    marginBottom: 12,
-    gap: 12,
+    marginBottom: 8,
+    gap: 8,
   },
   infoCard: {
     backgroundColor: colors.white,
     flex: 1,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 16,
+    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1,
     borderColor: colors.gray200,
     shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+    minHeight: 120,
   },
   infoIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginLeft: 12,
+  },
+  infoIcon: {
+    width: 84,
+    height: 84,
   },
   infoContent: {
     flex: 1,
+    justifyContent: 'center',
   },
   infoLabel: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.gray600,
-    marginBottom: 4,
+    marginBottom: 6,
+    fontWeight: '500',
   },
   infoValue: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.text,
     marginBottom: 6,
   },
@@ -651,7 +760,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   trendText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '500',
   },
   sectionHeader: {

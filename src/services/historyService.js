@@ -57,6 +57,8 @@ export const getUserHistory = async emailOrId => {
     const endpoint = `/api/users/history?${queryParam}`;
     const url = `${getApiBaseUrl()}${endpoint}`;
 
+    console.log('🌐 Fetching from URL:', url);
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
@@ -73,14 +75,33 @@ export const getUserHistory = async emailOrId => {
 
     const data = await response.json();
 
-    if (!response.ok || !data.success) {
-      console.error('❌ API Error:', data.message || response.statusText);
+    console.log('📥 API Response:', JSON.stringify(data, null, 2));
+
+    if (!response.ok) {
+      console.error('❌ HTTP Error:', response.status, data.message);
+      throw new Error(
+        data.message || `HTTP ${response.status}: ${response.statusText}`,
+      );
+    }
+
+    if (!data.success) {
+      console.error('❌ API returned success=false:', data.message);
       throw new Error(data.message || 'Failed to fetch user history');
+    }
+
+    // Handle empty history gracefully
+    if (
+      data.data &&
+      Array.isArray(data.data.history) &&
+      data.data.history.length === 0
+    ) {
+      console.log('✅ User has empty history');
+      return data;
     }
 
     console.log(
       '✅ User history retrieved:',
-      data.data?.historyCount || 0,
+      data.data?.history?.length || data.data?.historyCount || 0,
       'entries',
     );
     return data;
